@@ -75,8 +75,18 @@ int main(int argc, char* argv[])
 
 	movella_dot::DotSensorMsg dot_msg;
 
+	for (auto const& device : xdpcHandler.connectedDots())
+	{
+		cout << endl << "Resetting alignment to default for device " << device->bluetoothAddress() << ": ";
+		if (device->resetOrientation(XRM_DefaultAlignment))
+			cout << "OK";
+		else
+			cout << "NOK: " << device->lastResultText();
+	}
+
 	bool orientationResetDone = false;
 	int64_t startTime = XsTime::timeStampNow();
+
 	while (ros::ok())
 	{
 		if (xdpcHandler.packetsAvailable())
@@ -138,6 +148,21 @@ int main(int argc, char* argv[])
 				}
 			}
 			cout << flush;
+			// RESET
+			if (!orientationResetDone && (XsTime::timeStampNow() - startTime) > 5000)
+			{
+				for (auto const& device : xdpcHandler.connectedDots())
+				{
+					cout << endl << "Resetting heading for device " << device->bluetoothAddress() << ": ";
+					if (device->resetOrientation(XRM_Heading))
+						cout << "OK";
+					else
+						cout << "NOK: " << device->lastResultText();
+				}
+				cout << endl;
+				orientationResetDone = true;
+			}
+			// RESET END
 		}
 		XsTime::msleep(0);
 	}
@@ -146,14 +171,6 @@ int main(int argc, char* argv[])
 
 	sleep(3);
 
-	for (auto const& device : xdpcHandler.connectedDots())
-	{
-		cout << endl << "Resetting heading to default for device " << device->bluetoothAddress() << ": ";
-		if (device->resetOrientation(XRM_DefaultAlignment))
-			cout << "OK";
-		else
-			cout << "NOK: " << device->lastResultText();
-	}
 	cout << endl << endl;
 
 	cout << "Stopping measurement..." << endl;
